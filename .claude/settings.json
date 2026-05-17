@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "enableAllProjectMcpServers": true,
+  "permissions": {
+    "allow": [
+      "Read(./**)",
+      "Write(./data/**)",
+      "Write(./initiatives/**)",
+      "Write(./reports/**)",
+      "Edit(./data/**)",
+      "Edit(./initiatives/**)",
+      "Edit(./reports/**)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(grep:*)",
+      "Bash(rg:*)",
+      "Bash(find:*)",
+      "Bash(jq:*)",
+      "Bash(wc:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(sort:*)",
+      "Bash(uniq:*)",
+      "Bash(awk:*)",
+      "Bash(sed:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(bash scripts/sync-skills.sh:*)",
+      "mcp__marketplaceadpros__*"
+    ],
+    "deny": [
+      "Read(./**/.env)",
+      "Read(./**/secrets/**)",
+      "Read(./**/credentials*)"
+    ]
+  }
+}

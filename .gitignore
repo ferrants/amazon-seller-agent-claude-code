@@ -1,0 +1,29 @@
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+secrets/
+credentials*
+*.pem
+*.key
+
+# Local Claude state
+.claude/settings.local.json
+.claude/.credentials.json
+
+# Ad-hoc local data dumps. Keep curated data/ files in git;
+# uncomment the next two lines if you'd rather keep all pulls local.
+# data/brands/*/ads/*.csv
+# data/brands/*/inventory/*.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# Python / Node scratch (if you add scripts)
+__pycache__/
+*.pyc
+node_modules/

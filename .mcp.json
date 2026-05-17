@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "marketplaceadpros": {
+      "type": "http",
+      "url": "https://app.marketplaceadpros.com/mcp"
+    }
+  }
+}
