@@ -1,0 +1,45 @@
+name: validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    # Weekly check that the upstream skills bundle is still reachable.
+    - cron: "0 14 * * 1"
+
+jobs:
+  shellcheck:
+    name: shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run shellcheck on scripts/
+        uses: ludeeus/action-shellcheck@master
+        with:
+          scandir: ./scripts
+
+  sync-dry-run:
+    name: sync-skills.sh --dry-run
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify upstream bundle is reachable and lists skills
+        run: |
+          bash scripts/sync-skills.sh --dry-run | tee /tmp/sync.out
+          grep -E "skills in bundle \([0-9]+\):" /tmp/sync.out
+
+  mcp-json-valid:
+    name: .mcp.json is valid JSON
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: jq . .mcp.json > /dev/null
+
+  settings-json-valid:
+    name: .claude/settings.json is valid JSON
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: jq . .claude/settings.json > /dev/null

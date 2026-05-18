@@ -1,6 +1,11 @@
 # Amazon Seller Agent (Claude Code starter)
 
+[![validate](https://github.com/heyferrante/amazon-seller-agent-claude-code/actions/workflows/validate.yml/badge.svg)](https://github.com/heyferrante/amazon-seller-agent-claude-code/actions/workflows/validate.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 A starter repo that turns Claude Code into an operating agent for your Amazon selling business. Clone it, authenticate the Marketplace Ad Pros (MAP) MCP, and Claude gets a curated set of Amazon-focused skills plus a durable place to track brands, initiatives, and reports.
+
+> **Using this as a template?** On GitHub, click **Use this template → Create a new repository** to start with a clean history. Or just `git clone` and re-init if you want to keep the upstream available for updates.
 
 ## What's in here
 
@@ -102,6 +107,11 @@ scripts/sync-skills.sh  Upsert skills from MAP
 - The MAP MCP stores its OAuth credentials in Claude Code's own keychain — nothing lands in the repo.
 - Data you pull (campaign reports, inventory snapshots) lands under `data/brands/<slug>/`. Decide per-brand whether to commit those snapshots or keep them local (uncomment the patterns in `.gitignore` to keep them local-only).
 
-## License & attribution
+## License
 
-Skills are produced and maintained by [Marketplace Ad Pros](https://marketplaceadpros.com/skills/). This template just wires them into a sensible workspace.
+The template itself (scaffolding, scripts, CLAUDE.md, configs) is MIT-licensed — see [LICENSE](LICENSE). The bundled skills under `.claude/skills/` are produced and maintained by [Marketplace Ad Pros](https://marketplaceadpros.com/skills/) and licensed by them separately.
+
+## Contributing & security
+
+- [CONTRIBUTING.md](CONTRIBUTING.md) — what belongs upstream vs. what to keep in your fork
+- [SECURITY.md](SECURITY.md) — credential handling, data sensitivity, and reporting issues
