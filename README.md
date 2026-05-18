@@ -1,6 +1,6 @@
 # Amazon Seller Agent (Claude Code starter)
 
-[![validate](https://github.com/heyferrante/amazon-seller-agent-claude-code/actions/workflows/validate.yml/badge.svg)](https://github.com/heyferrante/amazon-seller-agent-claude-code/actions/workflows/validate.yml)
+[![validate](https://github.com/ferrants/amazon-seller-agent-claude-code/actions/workflows/validate.yml/badge.svg)](https://github.com/ferrants/amazon-seller-agent-claude-code/actions/workflows/validate.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 A starter repo that turns Claude Code into an operating agent for your Amazon selling business. Clone it, authenticate the Marketplace Ad Pros (MAP) MCP, and Claude gets a curated set of Amazon-focused skills plus a durable place to track brands, initiatives, and reports.
