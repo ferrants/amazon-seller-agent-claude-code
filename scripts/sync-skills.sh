@@ -69,7 +69,9 @@ fi
 
 echo
 for s in "${skills[@]}"; do
-  rm -rf "$SKILLS_DIR/$s"
+  # Use ${var:?} guards so an empty SKILLS_DIR or skill name can never
+  # expand to `rm -rf /` (shellcheck SC2115).
+  rm -rf "${SKILLS_DIR:?SKILLS_DIR is unset}/${s:?skill name is empty}"
   cp -R "$tmpdir/unpack/$s" "$SKILLS_DIR/$s"
 done
 
