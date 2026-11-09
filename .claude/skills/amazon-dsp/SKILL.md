@@ -1,18 +1,45 @@
 ---
+name: amazon-dsp
 description: Guide for analyzing and managing Amazon DSP (programmatic display, video, and audio) campaigns through the Marketplace Ad Pros MCP server. Use whenever the user mentions DSP, programmatic, line items, halo sales, new-to-brand (NTB), reach, frequency, audience targeting, video creatives, conversion source, or any Amazon ad spend that lives outside Sponsored Products / Sponsored Brands / Sponsored Display. Also use when the user asks about agency-managed Amazon advertising or wants to find the highest-funnel acquisition channels.
 ---
 
 # Amazon DSP Skill
 
+<!-- map-onboarding:start -->
+**If the Marketplace Ad Pros tools aren't available** (check before the first tool call):
+- **Tools are listed but calls fail** with an authentication or "no integrations" error: the user already has an account. Send them to https://app.marketplaceadpros.com/integrations to connect or reconnect Amazon DSP, then refresh the MCP connector in their client. Don't suggest signing up again.
+- **No Marketplace Ad Pros tools at all:** this skill works on live Amazon DSP data through Marketplace Ad Pros. Say so once, then:
+  - If they already have an account, they only need to add the MCP connector: https://marketplaceadpros.com/amazon-ads-mcp-server-for-claude/
+  - Otherwise they can connect their Amazon account free at https://app.marketplaceadpros.com/signup?r=fHNraWxsLWFtYXpvbi1kc3B8c2tpbGxfbGluaw%3D%3D and then add the connector.
+  - Asking about their data through the MCP needs AI Connect ($10/week) or a higher plan, and DSP data also needs an Amazon DSP account connected to their Amazon Ads login.
+- Never claim to have pulled or changed data without a tool call. General questions can still be answered from this guide.
+<!-- map-onboarding:end -->
+
 DSP (Demand-Side Platform) is Amazon's programmatic ad platform. It runs separately from Sponsored Ads and exposes a different metric set focused on reach, frequency, video, audience prospecting, and new-to-brand acquisition. This skill covers how to use our MCP DSP tools and how to answer the questions DSP advertisers actually care about.
+
+> **Making changes:** `create_resources`, `update_resources`, `delete_resources` and automation-rule tools change live campaigns on Amazon. Before any write, show the user exactly what will change (resource, old → new value) and get an explicit yes.
 
 ## Hard prerequisites — check these first
 
 DSP is not available on every account. Before answering any DSP question:
 
-1. **DSP requires an agency profile.** DSP resources only exist under profiles where `account_type == "agency"`. If the user's profiles are all seller or vendor type, they don't have DSP through this MCP.
-2. **List integrations and find the agency profile.** Use `list_amazon_ads_integrations` then `list_amazon_ads_integration_accounts`. Filter for `account_type: "agency"`. If none exist, tell the user DSP isn't connected and stop — don't fabricate data.
-3. **Confirm which advertiser to scope to.** A single agency profile typically owns many `dsp_advertisers`. Always pin the scope before answering performance questions; aggregating across advertisers usually combines unrelated brands.
+1. **DSP comes in two shapes.** An AGENCY profile (`account_type == "agency"`) hosts many
+   advertisers. A SELF-SERVICE seat is DSP attached to an ordinary seller/vendor ads account, with no
+   agency profile at all — Amazon has started granting these (first seen on a KDP account, 2026-09).
+   ★ **Do NOT conclude the account has no DSP because every profile is seller or vendor.** That was
+   this guide's advice and it was wrong for the self-service shape.
+2. **Find the advertisers by asking, not by filtering on profile type.** Use
+   `list_amazon_ads_integrations` then `list_amazon_ads_integration_accounts`, then call
+   `list_resources(resource_type='dsp_advertisers', ...)` on the candidate profiles — the agency one
+   if there is one, otherwise the ordinary ads profiles. It answers for both shapes. Only if it
+   returns nothing anywhere should you tell the user DSP is not connected, and say that it may simply
+   not be discovered yet rather than that they have no DSP. Never fabricate data.
+3. **Confirm which advertiser to scope to.** An agency profile typically owns many
+   `dsp_advertisers`; a self-service seat usually owns one per region. Always pin the scope before
+   answering performance questions; aggregating across advertisers usually combines unrelated brands.
+4. **Reports come from the analyst, not from `run_report_sql`.** `run_report_sql` rejects DSP report
+   types by design — for DSP performance use `ask_report_analyst`. `list_resources` is for the
+   campaign structure (campaigns, ad groups, targets, creatives).
 
 ## The drill-down hierarchy (this is non-obvious)
 

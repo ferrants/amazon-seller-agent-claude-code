@@ -14,13 +14,16 @@ A starter repo that turns Claude Code into an operating agent for your Amazon se
   - `amazon-ads` — using MAP MCP for reporting, optimization, bid recommendations
   - `amazon-ads-optimization` — bid/budget tuning, negatives, seasonal playbooks
   - `amazon-seller-central` — inventory health, FBA fees, search query performance
-  - `amazon-dsp` — DSP performance (agency profiles)
-  - `amazon-listing-audit` — RUFUS scoring, hijack detection, suppression triage
+  - `amazon-dsp` — DSP performance (agency or self-service)
+  - `amazon-listing-audit` — Alexa for Shopping scoring, hijack detection, suppression triage
   - `amazon-reorder-planning` — reorder points, safety stock, PO drafts
   - `experiments` — design, launch, log, and conclude optimization experiments
   - `fba-inventory-risk-dashboard` — interactive React dashboard for stockout risk
   - `wasted-ad-spend-dashboard` — search terms burning clicks with no conversions
   - `search-term-harvest-dashboard` — promote winning broad/phrase terms to exact
+  - `amazon-title-optimizer` — rewrite titles to Amazon's 75-character limit without losing what sells
+  - `amazon-holiday-events` — prep, run and review Prime Day, Prime Big Deal Days and BFCM
+  - `amazon-product-launch` — research-first launch plan for a new ASIN
 - **Tracking layout** — `data/brands/`, `initiatives/`, `reports/` — so progress survives across sessions.
 - **`CLAUDE.md`** — durable instructions that make Claude operate as a brand manager, not a one-shot assistant.
 
@@ -59,7 +62,7 @@ Pick `marketplaceadpros`, then `Authenticate`. A browser window will open, you s
 /skills
 ```
 
-You should see the 10 Amazon skills listed above.
+You should see the 13 Amazon skills listed above.
 
 ## Keeping skills up to date
 

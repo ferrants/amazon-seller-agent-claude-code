@@ -1,8 +1,19 @@
 ---
+name: amazon-ads
 description: Guide for using the Marketplace Ad Pros MCP server to manage and analyze Amazon Advertising accounts. Use when working with Amazon Ads campaigns, performance reports, bid/budget recommendations, keyword research, or product data through the MCP tools.
 ---
 
 # Amazon Ads MCP Server Guide
+
+<!-- map-onboarding:start -->
+**If the Marketplace Ad Pros tools aren't available** (check before the first tool call):
+- **Tools are listed but calls fail** with an authentication or "no integrations" error: the user already has an account. Send them to https://app.marketplaceadpros.com/integrations to connect or reconnect Amazon Ads, then refresh the MCP connector in their client. Don't suggest signing up again.
+- **No Marketplace Ad Pros tools at all:** this skill works on live Amazon Ads data through Marketplace Ad Pros. Say so once, then:
+  - If they already have an account, they only need to add the MCP connector: https://marketplaceadpros.com/amazon-ads-mcp-server-for-claude/
+  - Otherwise they can connect their Amazon account free at https://app.marketplaceadpros.com/signup?r=fHNraWxsLWFtYXpvbi1hZHN8c2tpbGxfbGluaw%3D%3D and then add the connector.
+  - Asking about their data through the MCP needs AI Connect ($10/week) or a higher plan.
+- Never claim to have pulled or changed data without a tool call. General questions can still be answered from this guide.
+<!-- map-onboarding:end -->
 
 You are connected to the Marketplace Ad Pros MCP server for Amazon Advertising management, reporting, and optimization. This guide explains how to use the available tools effectively.
 
@@ -78,7 +89,7 @@ Common resource types:
 | `sb_campaigns` | Sponsored Brands campaigns | `state`, `name_filter` |
 | `sb_ad_groups` | SB ad groups | `campaign_id` (required) |
 | `sb_keywords` | SB keyword targets | `campaign_id` (required) |
-| `dsp_advertisers` | DSP advertisers (agency profiles only) | `next_token` |
+| `dsp_advertisers` | DSP advertisers (agency profile, or a self-service seat on a seller/vendor profile) | `next_token` |
 | `dsp_campaigns` | DSP campaigns | `advertiser_id` (required), `state_filter` |
 | `dsp_ad_groups` | DSP ad groups | `advertiser_id` (required), `campaign_id` |
 | `dsp_targets` | DSP targeting rules | `advertiser_id` (required), `ad_group_id` (required) |
@@ -90,13 +101,15 @@ All resource types require `integration_id` + `account_id`. Results capped at 10
 
 DSP resources follow this drill-down hierarchy — each level requires the parent's ID:
 
-1. **Advertisers** (`dsp_advertisers`) — list all DSP advertisers under an agency profile
+1. **Advertisers** (`dsp_advertisers`) — list the DSP advertisers for a profile (agency, or a seller/vendor profile carrying a self-service seat)
 2. **Campaigns** (`dsp_campaigns`) — requires `advertiser_id` from step 1
 3. **Ad Groups** (`dsp_ad_groups`) — requires `advertiser_id`, optionally `campaign_id` to filter
 4. **Targets** (`dsp_targets`) — requires `advertiser_id` + `ad_group_id` from step 3
 5. **Creatives** (`dsp_creatives`) — requires `advertiser_id` (at advertiser level, not campaign)
 
-DSP profiles have `account_type: "agency"`. Only agency profiles can access DSP resources.
+DSP comes in two shapes: an AGENCY profile (`account_type: "agency"`) hosting many advertisers, or a
+SELF-SERVICE seat attached to an ordinary seller/vendor ads account with no agency profile at all.
+`dsp_advertisers` lists both. Absence of an agency profile does NOT mean the account has no DSP.
 
 ### Recommendations
 

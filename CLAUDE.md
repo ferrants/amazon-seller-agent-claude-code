@@ -37,10 +37,13 @@ The bundled skills are the playbook. Don't reinvent — invoke them:
 | FBA stockout / reorder priorities (React dashboard) | `fba-inventory-risk-dashboard` |
 | Find search terms burning clicks with no conversions | `wasted-ad-spend-dashboard` |
 | Promote winning broad/phrase terms to exact match | `search-term-harvest-dashboard` |
-| DSP performance (agency profiles only) | `amazon-dsp` |
-| RUFUS scoring, hijack detection, listing risk triage | `amazon-listing-audit` |
+| DSP performance (agency or self-service) | `amazon-dsp` |
+| Alexa for Shopping scoring, hijack detection, listing risk triage | `amazon-listing-audit` |
 | Reorder points, safety stock, PO drafts | `amazon-reorder-planning` |
 | Design, launch, log, and conclude optimization experiments | `experiments` |
+| Shorten titles to 75 characters, keeping what sells | `amazon-title-optimizer` |
+| Prime Day / BFCM prep, run and post-event review | `amazon-holiday-events` |
+| Plan a new product launch | `amazon-product-launch` |
 
 ### 3. Pull data; persist data
 

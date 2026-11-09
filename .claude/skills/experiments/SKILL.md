@@ -1,10 +1,23 @@
 ---
+name: experiments
 description: Run Marketplace Ad Pros optimization experiments end-to-end through the MCP. Use whenever the user asks "what should I test", "what's running on my experiments", "what's next", "log this on the experiment", "start that experiment", "dismiss the proposal", "wrap up this experiment", or mentions an experiment by name or ID. Trigger any time the user is working in the Experiments section of Marketplace Ad Pros, reviewing AI-generated proposals, applying changes to running tests, or asking for next steps the daily tracker has identified.
 ---
 
 # Marketplace Ad Pros Experiments
 
+<!-- map-onboarding:start -->
+**If the Marketplace Ad Pros tools aren't available** (check before the first tool call):
+- **Tools are listed but calls fail** with an authentication or "no integrations" error: the user already has an account. Send them to https://app.marketplaceadpros.com/integrations to connect or reconnect Amazon Ads, then refresh the MCP connector in their client. Don't suggest signing up again.
+- **No Marketplace Ad Pros tools at all:** this skill works on live Amazon Ads data through Marketplace Ad Pros. Say so once, then:
+  - If they already have an account, they only need to add the MCP connector: https://marketplaceadpros.com/amazon-ads-mcp-server-for-claude/
+  - Otherwise they can connect their Amazon account free at https://app.marketplaceadpros.com/signup?r=fHNraWxsLWV4cGVyaW1lbnRzfHNraWxsX2xpbms%3D and then add the connector.
+  - Experiments need a full-feature plan (https://marketplaceadpros.com/plans/); AI Connect accounts can't run them.
+- Never claim to have pulled or changed data without a tool call. General questions can still be answered from this guide.
+<!-- map-onboarding:end -->
+
 You help the user run optimization experiments end-to-end through the MCP. Marketplace Ad Pros proposes the tests and tracks impact daily; **you do the actual work in their Amazon account and write back what you did**. The user is the human in the loop — confirm before write actions, and always tell them what changed.
+
+Experiments are part of the full-features Marketplace Ad Pros plans; AI Connect accounts can't run them.
 
 ## The lifecycle
 
@@ -20,7 +33,7 @@ Call `get_experiments(show_experiment_details=true)`. For each `started` experim
 
 ## When working a `current_action`
 
-`current_action` is written as concrete steps — often referencing other MCP tools by name (e.g. `ask_report_analyst`, `list_amazon_ads_campaigns`). Do the work yourself:
+`current_action` is written as concrete steps — often referencing other MCP tools by name (e.g. `ask_report_analyst`, `list_resources`). Do the work yourself:
 
 - Pull data via `ask_report_analyst` or similar read tools
 - Make changes via the Amazon Ads write tools **only after the user authorizes**
@@ -62,7 +75,7 @@ Read tools are safe to call freely. Write tools should be approved by the user �
 - `planned` ≠ `started`. A `planned` experiment hasn't captured a baseline; call `start_experiment` before `complete_experiment`.
 - The tracker runs **once daily** — if you just made a change in Amazon, the impact won't appear in `current_action` until tomorrow.
 - `current_action` references tools by name (e.g. "run ask_report_analyst"). That's your cue to actually call those tools, not just relay the instruction to the user.
-- If `add_experiment_log` fails with "requires a current full-features plan", the user is on `ai_connect` or trial-expired. Tell them experiments need a paid plan (two-week trial, Launch, Boost, or Dominion).
+- If an experiment tool fails with "requires a current full-features plan", the account is on AI Connect or its plan has lapsed. Tell them experiments need a full-features Marketplace Ad Pros plan (a trial counts) and point them to their account's plan settings.
 
 ## Examples
 
@@ -91,12 +104,12 @@ Read tools are safe to call freely. Write tools should be approved by the user �
 
 > **User:** Start the daily budget reallocation experiment.
 >
-> **Assistant:** Before I start it: this experiment has you reallocate budget from low-performing campaigns to the top performers over a 14-day window. You'll need to apply the budget changes in Amazon yourself once it's started — Marketplace Ad Pros doesn't push to Amazon automatically. Ready?
+> **Assistant:** Before I start it: this experiment has you reallocate budget from low-performing campaigns to the top performers over a 14-day window. Marketplace Ad Pros doesn't push changes to Amazon automatically — once it's started, I can make the budget changes for you (I'll show you each one first) or you can apply them yourself. Ready?
 >
 > **User:** Yes, go.
 >
 > **Assistant:** *(calls `start_experiment(experiment_id=...)`)*
-> Started. Planned end date: 2026-05-29. The first `current_action` will appear after tomorrow's tracker run. Want me to walk you through the budget changes you need to make in Amazon now?
+> Started. Planned end date: 2026-05-29. The first `current_action` will appear after tomorrow's tracker run. Want me to draft the budget changes now so you can approve them?
 
 ### Example 4 — Dismissing a proposal
 

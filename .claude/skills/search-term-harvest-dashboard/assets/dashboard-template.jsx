@@ -1,7 +1,8 @@
 // Search Term Harvest Dashboard — Template
 //
-// To populate: replace BRAND, MARKETPLACE, SNAPSHOT, WINDOW, TOTAL_AD_SALES
-// constants and the RAW array with values from the analyst response.
+// To populate: replace BRAND, MARKETPLACE, SNAPSHOT, WINDOW, TOTAL_AD_SALES,
+// the source/window/currency constants and the RAW array with values from the
+// analyst response (connected) or the uploaded report (manual mode).
 //
 // RAW row schema: {
 //   term: string,         // customer search term
@@ -11,10 +12,10 @@
 //   clicks: number,       // ≥3 by filter
 //   ctr: number,          // clicks / impressions, as a decimal
 //   cost: number,         // total ad cost in account currency
-//   sales: number,        // sales14d
-//   buys: number,         // purchases14d (0 = WATCH tier)
+//   sales: number,        // attributed sales in the ATTRIBUTION window
+//   buys: number,         // attributed orders in the ATTRIBUTION window (0 = WATCH tier)
 //   acos: number | null,  // null when sales = 0
-//   cvr: number,          // purchases14d / clicks
+//   cvr: number,          // buys / clicks
 //   isNew: boolean,       // true when searchTerm ≠ keywordText (NEW reach)
 // }
 //
@@ -22,7 +23,7 @@
 // the skill and must stay in sync with fba-inventory-risk-dashboard and
 // wasted-ad-spend-dashboard.
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { ArrowUp, ArrowDown, ChevronsUpDown, Search } from "lucide-react";
 
 // ── REPLACE THESE ─────────────────────────────────────────────────────────────
@@ -30,7 +31,12 @@ const BRAND = "{{ BRAND_NAME }}";              // e.g., "Example Brand Name"
 const MARKETPLACE = "{{ MARKETPLACE }}";        // e.g., "US Ads"
 const SNAPSHOT = "{{ SNAPSHOT_UTC }}";          // e.g., "2026-05-11 · 15:35 UTC"
 const WINDOW = "{{ DATE_WINDOW }}";             // e.g., "30D · 04-11 → 05-10"
-const TOTAL_AD_SALES = 0;                       // e.g., 411965.76
+const TOTAL_AD_SALES = 0;                       // e.g., 411965.76; null when no valid total exists (hides the %)
+const SOURCE_LABEL = "Live";                    // "Live" (connected) or "Uploaded report" (manual)
+const SOURCE = "sponsored_products_search_terms"; // report name (connected) or the uploaded file name(s)
+const ATTRIBUTION = "14-day";                   // attribution window of the orders/sales columns; never relabel 7-day as 14-day
+const SALES_LABEL = "ad sales";                 // "ad sales", or "ad sales in this report" when the total comes from the search term file
+const CURRENCY = "$";                           // currency symbol of the report, e.g., "€", "£"; no conversion
 
 const RAW = [
   // { term: "example product line supplement", keyword: "example product line", match: "PHRASE",
@@ -68,18 +74,18 @@ function Stat({ label, value, sub, last }) {
     >
       <div
         className="text-xs uppercase tracking-widest"
-        style={{ color: palette.mute, fontFamily: "'Geist Mono', monospace", letterSpacing: "0.18em" }}
+        style={{ color: palette.mute, fontFamily: "'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace", letterSpacing: "0.18em" }}
       >
         {label}
       </div>
       <div
         className="text-4xl"
-        style={{ fontFamily: "'Instrument Serif', serif", color: palette.ink, lineHeight: 1 }}
+        style={{ fontFamily: "'Instrument Serif', Georgia, 'Times New Roman', serif", color: palette.ink, lineHeight: 1 }}
       >
         {value}
       </div>
       {sub && (
-        <div className="text-xs" style={{ color: palette.mute, fontFamily: "'Geist', sans-serif" }}>
+        <div className="text-xs" style={{ color: palette.mute, fontFamily: "'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" }}>
           {sub}
         </div>
       )}
@@ -95,7 +101,7 @@ function SortHeader({ label, active, dir, onClick, align = "left" }) {
       className="flex items-center gap-1.5 select-none"
       style={{
         color: active ? palette.ink : palette.mute,
-        fontFamily: "'Geist Mono', monospace",
+        fontFamily: "'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
         fontSize: "10.5px",
         letterSpacing: "0.16em",
         textTransform: "uppercase",
@@ -114,7 +120,7 @@ function ReachBadge({ isNew }) {
       style={{
         display: "inline-block",
         padding: "2px 7px",
-        fontFamily: "'Geist Mono', monospace",
+        fontFamily: "'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
         fontSize: "9.5px",
         letterSpacing: "0.12em",
         color: isNew ? palette.forest : palette.mute,
@@ -133,22 +139,12 @@ export default function SearchTermHarvestDashboard() {
   const [query, setQuery] = useState("");
   const [reachFilter, setReachFilter] = useState("all"); // "all" | "new" | "same"
 
-  useEffect(() => {
-    const link = document.createElement("link");
-    link.rel = "stylesheet";
-    link.href =
-      "https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap";
-    document.head.appendChild(link);
-    return () => {
-      try { document.head.removeChild(link); } catch (e) {}
-    };
-  }, []);
 
   const totalSales = useMemo(() => RAW.reduce((s, r) => s + r.sales, 0), []);
   const newReachCount = useMemo(() => RAW.filter((r) => r.isNew && r.buys > 0).length, []);
   const primeCount = useMemo(() => RAW.filter((r) => tier(r).label === "PRIME").length, []);
   const watchCount = useMemo(() => RAW.filter((r) => r.buys === 0).length, []);
-  const pctOfTotal = TOTAL_AD_SALES > 0 ? (totalSales / TOTAL_AD_SALES) * 100 : 0;
+  const pctOfTotal = TOTAL_AD_SALES > 0 ? (totalSales / TOTAL_AD_SALES) * 100 : null;
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -183,15 +179,15 @@ export default function SearchTermHarvestDashboard() {
   const maxCtr = RAW.length ? Math.max(...RAW.map((r) => r.ctr)) : 1;
   const maxSales = RAW.length ? Math.max(...RAW.map((r) => r.sales)) : 1;
 
-  const fmtUSD = (n) =>
-    "$" + n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-  const fmtUSDcents = (n) =>
-    "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmtMoney = (n) =>
+    CURRENCY + n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  const fmtMoneyCents = (n) =>
+    CURRENCY + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   return (
     <div
       className="min-h-screen w-full"
-      style={{ background: palette.bg, fontFamily: "'Geist', sans-serif", color: palette.ink }}
+      style={{ background: palette.bg, fontFamily: "'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif", color: palette.ink }}
     >
       <div className="max-w-6xl mx-auto px-6 py-10 md:px-12 md:py-14">
         <header
@@ -202,16 +198,16 @@ export default function SearchTermHarvestDashboard() {
             <div
               className="text-xs uppercase mb-3"
               style={{
-                fontFamily: "'Geist Mono', monospace",
+                fontFamily: "'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
                 letterSpacing: "0.24em",
                 color: palette.oxblood,
               }}
             >
-              ⏱ Live · {BRAND} · {MARKETPLACE}
+              ⏱ {SOURCE_LABEL} · {BRAND} · {MARKETPLACE}
             </div>
             <h1
               style={{
-                fontFamily: "'Instrument Serif', serif",
+                fontFamily: "'Instrument Serif', Georgia, 'Times New Roman', serif",
                 fontSize: "clamp(2.5rem, 5vw, 3.75rem)",
                 lineHeight: 0.95,
                 color: palette.ink,
@@ -232,7 +228,7 @@ export default function SearchTermHarvestDashboard() {
           <div
             className="text-xs"
             style={{
-              fontFamily: "'Geist Mono', monospace",
+              fontFamily: "'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
               color: palette.mute,
               letterSpacing: "0.08em",
               textAlign: "right",
@@ -251,8 +247,12 @@ export default function SearchTermHarvestDashboard() {
         >
           <Stat
             label="High-intent revenue"
-            value={fmtUSD(totalSales)}
-            sub={`${pctOfTotal.toFixed(1)}% of $${(TOTAL_AD_SALES / 1000).toFixed(0)}K ad sales`}
+            value={fmtMoney(totalSales)}
+            sub={
+              pctOfTotal === null
+                ? "Share of total ad sales not available"
+                : `${pctOfTotal.toFixed(1)}% of ${CURRENCY}${(TOTAL_AD_SALES / 1000).toFixed(1)}K ${SALES_LABEL}`
+            }
           />
           <Stat
             label="New harvest opportunities"
@@ -283,13 +283,13 @@ export default function SearchTermHarvestDashboard() {
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Filter by search term or matched keyword…"
               className="flex-1 bg-transparent outline-none text-sm"
-              style={{ color: palette.ink, fontFamily: "'Geist Mono', monospace" }}
+              style={{ color: palette.ink, fontFamily: "'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" }}
             />
             {query && (
               <button
                 onClick={() => setQuery("")}
                 className="text-xs"
-                style={{ color: palette.mute, fontFamily: "'Geist Mono', monospace" }}
+                style={{ color: palette.mute, fontFamily: "'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" }}
               >
                 clear
               </button>
@@ -308,7 +308,7 @@ export default function SearchTermHarvestDashboard() {
                   padding: "8px 12px",
                   background: reachFilter === opt.key ? palette.ink : palette.paper,
                   color: reachFilter === opt.key ? palette.bg : palette.mute,
-                  fontFamily: "'Geist Mono', monospace",
+                  fontFamily: "'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
                   fontSize: "10.5px",
                   letterSpacing: "0.12em",
                   textTransform: "uppercase",
@@ -321,7 +321,7 @@ export default function SearchTermHarvestDashboard() {
           </div>
           <div
             className="text-xs ml-auto"
-            style={{ color: palette.mute, fontFamily: "'Geist Mono', monospace" }}
+            style={{ color: palette.mute, fontFamily: "'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" }}
           >
             {rows.length} of {RAW.length}
           </div>
@@ -337,7 +337,7 @@ export default function SearchTermHarvestDashboard() {
                 <th className="px-4 py-3 text-left" style={{ width: "100px" }}>
                   <span
                     style={{
-                      fontFamily: "'Geist Mono', monospace",
+                      fontFamily: "'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
                       fontSize: "10.5px",
                       letterSpacing: "0.16em",
                       color: palette.mute,
@@ -365,7 +365,7 @@ export default function SearchTermHarvestDashboard() {
                 <th className="px-4 py-3 text-left" style={{ width: "85px" }}>
                   <span
                     style={{
-                      fontFamily: "'Geist Mono', monospace",
+                      fontFamily: "'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
                       fontSize: "10.5px",
                       letterSpacing: "0.16em",
                       color: palette.mute,
@@ -435,7 +435,7 @@ export default function SearchTermHarvestDashboard() {
                         />
                         <span
                           style={{
-                            fontFamily: "'Geist Mono', monospace",
+                            fontFamily: "'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
                             fontSize: "9.5px",
                             letterSpacing: "0.12em",
                             color: t.color,
@@ -449,7 +449,7 @@ export default function SearchTermHarvestDashboard() {
                     <td
                       className="px-4 py-3"
                       style={{
-                        fontFamily: "'Geist Mono', monospace",
+                        fontFamily: "'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
                         fontSize: "13px",
                         color: palette.ink,
                         fontWeight: 500,
@@ -461,7 +461,7 @@ export default function SearchTermHarvestDashboard() {
                     <td
                       className="px-4 py-3"
                       style={{
-                        fontFamily: "'Geist Mono', monospace",
+                        fontFamily: "'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
                         fontSize: "11px",
                         color: palette.mute,
                         maxWidth: "180px",
@@ -500,7 +500,7 @@ export default function SearchTermHarvestDashboard() {
                         </div>
                         <span
                           style={{
-                            fontFamily: "'Geist Mono', monospace",
+                            fontFamily: "'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
                             fontSize: "13px",
                             color: palette.ink,
                             minWidth: 44,
@@ -511,7 +511,7 @@ export default function SearchTermHarvestDashboard() {
                         </span>
                         <span
                           style={{
-                            fontFamily: "'Geist Mono', monospace",
+                            fontFamily: "'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
                             fontSize: "10px",
                             color: palette.mute,
                             minWidth: 44,
@@ -525,7 +525,7 @@ export default function SearchTermHarvestDashboard() {
                     <td
                       className="px-4 py-3 text-right"
                       style={{
-                        fontFamily: "'Geist Mono', monospace",
+                        fontFamily: "'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
                         fontSize: "13px",
                         color: r.acos === null ? palette.mute : palette.ink,
                       }}
@@ -541,7 +541,7 @@ export default function SearchTermHarvestDashboard() {
                             background: palette.rule,
                             position: "relative",
                           }}
-                          title={`${fmtUSDcents(r.sales)} of ${fmtUSDcents(maxSales)} max`}
+                          title={`${fmtMoneyCents(r.sales)} of ${fmtMoneyCents(maxSales)} max`}
                         >
                           <div
                             style={{
@@ -556,7 +556,7 @@ export default function SearchTermHarvestDashboard() {
                         </div>
                         <span
                           style={{
-                            fontFamily: "'Instrument Serif', serif",
+                            fontFamily: "'Instrument Serif', Georgia, 'Times New Roman', serif",
                             fontSize: "22px",
                             color: t.color,
                             fontWeight: 400,
@@ -564,7 +564,7 @@ export default function SearchTermHarvestDashboard() {
                             textAlign: "right",
                           }}
                         >
-                          {r.sales === 0 ? "—" : fmtUSDcents(r.sales)}
+                          {r.sales === 0 ? "—" : fmtMoneyCents(r.sales)}
                         </span>
                       </div>
                     </td>
@@ -580,7 +580,7 @@ export default function SearchTermHarvestDashboard() {
           style={{
             borderTop: `1px solid ${palette.rule}`,
             color: palette.mute,
-            fontFamily: "'Geist', sans-serif",
+            fontFamily: "'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif",
             lineHeight: 1.6,
           }}
         >
@@ -588,7 +588,7 @@ export default function SearchTermHarvestDashboard() {
             <div
               className="uppercase mb-1.5"
               style={{
-                fontFamily: "'Geist Mono', monospace",
+                fontFamily: "'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
                 fontSize: "10px",
                 letterSpacing: "0.16em",
                 color: palette.ink,
@@ -604,7 +604,7 @@ export default function SearchTermHarvestDashboard() {
             <div
               className="uppercase mb-1.5"
               style={{
-                fontFamily: "'Geist Mono', monospace",
+                fontFamily: "'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
                 fontSize: "10px",
                 letterSpacing: "0.16em",
                 color: palette.ink,
@@ -613,14 +613,14 @@ export default function SearchTermHarvestDashboard() {
               Reach
             </div>
             NEW = customer search term differs from the matched keyword text (harvesting as
-            exact = new reach). SAME = identical to keyword (harvesting tightens bid control
-            but doesn't expand reach).
+            exact can add reach, unless it's already an exact keyword elsewhere). SAME =
+            identical to keyword (harvesting tightens bid control but doesn't expand reach).
           </div>
           <div>
             <div
               className="uppercase mb-1.5"
               style={{
-                fontFamily: "'Geist Mono', monospace",
+                fontFamily: "'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
                 fontSize: "10px",
                 letterSpacing: "0.16em",
                 color: palette.ink,
@@ -628,8 +628,8 @@ export default function SearchTermHarvestDashboard() {
             >
               Source
             </div>
-            sponsored_products_search_terms · 14-day attribution. Snapshot from{" "}
-            <span style={{ color: palette.ink, fontFamily: "'Geist Mono', monospace" }}>
+            {SOURCE} · {ATTRIBUTION} attribution. Snapshot:{" "}
+            <span style={{ color: palette.ink, fontFamily: "'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" }}>
               {SNAPSHOT}
             </span>
             .

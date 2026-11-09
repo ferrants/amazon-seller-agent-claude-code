@@ -1,12 +1,25 @@
 ---
-description: Run a live wasted-ad-spend analysis for an Amazon Ads account and render the results as an interactive dashboard artifact. Trigger this skill whenever the user asks about wasted ad spend, search term inefficiency, "where am I bleeding money", "what's costing me clicks without sales", money leaks in sponsored ads, high-cost search terms with no conversions, or anything related to ad budget waste — even if they don't explicitly say "dashboard". Also trigger when the user wants candidates for negative keywords based on poor search-term performance, wants to refresh a previously-built waste view, or asks Claude to "run the waste check again". Uses the Marketplace Ad Pros MCP tools (Amazon Ads brands/profiles + ask_report_analyst on sponsored_products_search_terms) to query live data and produces a sortable, filterable React artifact in the same editorial-financial design language as the FBA inventory risk dashboard.
+name: wasted-ad-spend-dashboard
+description: Run a wasted-ad-spend analysis for an Amazon Ads account and render the results as an interactive dashboard artifact. Trigger this skill whenever the user asks about wasted ad spend, search term inefficiency, "where am I bleeding money", "what's costing me clicks without sales", money leaks in sponsored ads, high-cost search terms with no conversions, or anything related to ad budget waste — even if they don't explicitly say "dashboard". Also trigger when the user wants negative keyword candidates based on poor search-term performance, wants to refresh a previously-built waste view, or asks to "run the waste check again". Works live through the Marketplace Ad Pros MCP tools (Amazon Ads brands/profiles + ask_report_analyst on sponsored_products_search_terms), or on a Sponsored Products search term report the user uploads (CSV or Excel). Produces a sortable, filterable React artifact in the same editorial-financial design language as the FBA inventory risk dashboard.
 ---
 
 # Wasted Ad Spend Dashboard
 
-This skill takes the user from "where am I wasting money?" to a live, interactive dashboard showing every search term burning budget without producing sales, with sortable columns, magnitude bars, and cost tiers.
+<!-- map-onboarding:start -->
+**Pick the mode before anything else.** This skill runs on live data through Marketplace Ad Pros (connected mode) or on a report the user uploads (manual mode):
+- **The user uploaded a report or asks to use one:** manual mode. Read `references/manual-reports.md` and follow it; it replaces steps 1–3 below and governs wherever it differs from them. This applies even when the Marketplace Ad Pros tools are available.
+- **`list_brands` and `ask_report_analyst` are both available:** connected mode, the workflow below.
+- **Only one of them is listed, or calls fail** with an authentication or "no integrations" error: the user already has an account. Send them to https://app.marketplaceadpros.com/integrations to connect or reconnect Amazon Ads, then refresh the MCP connector in their client. Don't suggest signing up again. Meanwhile they can upload a report instead.
+- **No Marketplace Ad Pros tools at all:** say once that there are two ways to run this:
+  - Upload a Sponsored Products search term report for the period they want (30 days is a good default). A Sponsored Products campaign report for the same dates is optional; it makes "% of total spend" cover all their Sponsored Products spend.
+  - Or connect Marketplace Ad Pros and the data is pulled for them every time. If they already have an account, they only need to add the MCP connector: https://marketplaceadpros.com/amazon-ads-mcp-server-for-claude/. Otherwise they can connect their Amazon account free at https://app.marketplaceadpros.com/signup?r=fHNraWxsLXdhc3RlZC1hZC1zcGVuZC1kYXNoYm9hcmR8c2tpbGxfbGluaw%3D%3D and then add the connector. Asking about their data through the MCP needs AI Connect ($10/week) or a higher plan.
+- Name the report type only, never a menu path or exact column names: those change. The console's own help covers the current steps.
+- Never claim to have pulled data without a tool call or an uploaded file.
+<!-- map-onboarding:end -->
 
-## Workflow
+This skill takes the user from "where am I wasting money?" to an interactive dashboard showing every search term burning budget without producing sales, with sortable columns, magnitude bars, and cost tiers.
+
+## Workflow (connected mode)
 
 Follow these steps in order. Don't skip the discovery steps — the analyst tool errors when scoping is wrong, and waste analysis is meaningless without knowing what total spend the leak represents.
 
@@ -14,9 +27,9 @@ Follow these steps in order. Don't skip the discovery steps — the analyst tool
 
 Call `list_brands` to get the user's brands and the advertising profiles under them.
 
-If multiple brands exist, ask the user which brand to analyze. Use a tappable-options prompt with one option per brand (filter to brands that actually have an `accounts` entry where `platform == "amazon"`).
+If multiple brands exist, ask the user which brand to analyze. Use a tappable-options prompt (or a short numbered list if your client has no option buttons) with one option per brand (filter to brands that actually have an `accounts` entry where `platform == "amazon"`).
 
-**Then resolve a single Amazon Ads profile/marketplace before running any query.** Inspect the chosen brand's `accounts` (where `platform == "amazon"`). If the brand has more than one Amazon Ads profile (e.g., separate US and CA accounts under one brand), **ask the user which marketplace** with a tappable-options prompt — one option per profile, labeled with country code. Don't default silently; waste analysis is per-marketplace because consumer search behavior, competition, and pricing differ. Default suggestion when multiple exist: US (typically the largest).
+**Then resolve a single Amazon Ads profile/marketplace before running any query.** Inspect the chosen brand's `accounts` (where `platform == "amazon"`). If the brand has more than one Amazon Ads profile (e.g., separate US and CA accounts under one brand), **ask the user which marketplace** with a tappable-options prompt (or a short numbered list if your client has no option buttons) — one option per profile, labeled with country code. Don't default silently; waste analysis is per-marketplace because consumer search behavior, competition, and pricing differ. Default suggestion when multiple exist: US (typically the largest).
 
 Save the chosen `account_id` (the UUID for the specific ads profile, NOT the brand UUID) and pass it to the analyst tool via `account_ids`. Do NOT use `brand_ids` scoping for this skill — `brand_ids` would merge marketplaces and produce a mixed-locale dashboard that the rest of the workflow (single `MARKETPLACE` masthead, per-marketplace negative-keyword recommendations) assumes you don't have.
 
@@ -60,11 +73,13 @@ Lead the response with this triage in 2–3 sentences before the artifact. The d
 
 Use the template at `assets/dashboard-template.jsx` as the starting point. Save the populated artifact to `/mnt/user-data/outputs/wasted-ad-spend.jsx` and present it with `present_files`.
 
+**If you can't render artifacts** (no artifact support, no `present_files`, or no writable `/mnt/user-data/outputs` — e.g. in Claude Code), skip the template and the styling rules below. Present the same rows as a markdown table sorted the same way (search term, campaign, clicks, cost, CPC and cost tier), after the same headline triage. The analysis is the deliverable; the dashboard is the presentation.
+
 To populate:
 
 1. Read `assets/dashboard-template.jsx`.
 2. Replace the `RAW` array with the actual data rows from the analyst response. Each row needs: `term`, `campaign`, `impressions`, `clicks`, `cost`, `ctr`, `cpc`, `matches` (array of strings like `["EXACT", "PHRASE"]`). Use raw numbers from the `data` field — not rounded display values from the answer text.
-3. Replace the masthead constants: `BRAND` (from the brand `name` field), `MARKETPLACE` (use the ads profile's `country` field plus " Ads", e.g., "US Ads"), `SNAPSHOT` (from `report_freshness.sponsored_products_search_terms.data_complete_through`, formatted as "YYYY-MM-DD · HH:MM UTC"), `WINDOW` (the 30-day range as "30D · MM-DD → MM-DD"), `TOTAL_WASTED` (the aggregate from step 3), `TOTAL_SPEND` (from step 2), `WORST_TERM` (the term in row 1 of RAW, used in the headline stat).
+3. Replace the masthead constants: `BRAND` (from the brand `name` field), `MARKETPLACE` (use the ads profile's `country` field plus " Ads", e.g., "US Ads"), `SNAPSHOT` (from `report_freshness.sponsored_products_search_terms.data_complete_through`, formatted as "YYYY-MM-DD · HH:MM UTC"), `WINDOW` (the 30-day range as "30D · MM-DD → MM-DD"), `TOTAL_WASTED` (the aggregate from step 3), `TOTAL_SPEND` (from step 2), `WORST_TERM` (the term in row 1 of RAW, used in the headline stat). Leave the source constants at their connected-mode values: `SOURCE_LABEL = "Live"`, `SOURCE = "sponsored_products_search_terms"`, `ATTRIBUTION = "14-day"`, `SPEND_LABEL = "ad spend"`; set `CURRENCY` to the profile's currency symbol (default "$") and leave `TIERS` unless the re-anchor pitfall below applies.
 4. Do not modify the styling, palette, fonts, or layout — those are part of the skill's design language. The aesthetic is editorial-financial: warm cream background, Instrument Serif display, Geist Mono for data, oxblood/amber/olive cost tiers, tier-colored magnitude bars. Generic-looking tables defeat the purpose of building this as a skill.
 
 ### 6. Offer next steps
@@ -92,10 +107,10 @@ If the user asks for a different cut, adapt the question while keeping the struc
 
 ## Caveats to always surface
 
-The data has known limitations the user should be reminded of:
+The data has known limitations the user should be reminded of (connected mode; for uploaded reports, `references/manual-reports.md` says which apply):
 
 - Search-term reports lag 1–3 days behind real-time spend. The dashboard snapshot reflects this, not "right now".
-- Sales attribution is 14-day. A term with zero `purchases14d` today might convert later if the click was recent; consider re-running before adding aggressive negatives on borderline cases.
+- Sales attribution is 14-day in connected mode. A term with zero `purchases14d` today might convert later if the click was recent; consider re-running before adding aggressive negatives on borderline cases.
 - The 5-click minimum filter is a noise floor, not a hard rule. Terms with 1–4 clicks and zero conversions are excluded from this view but may still represent waste at scale — mention this if the user asks about the total long-tail.
 - "Top campaign" reflects which campaign spent the most on a given search term, not necessarily the only one. The full match_types list shows which match types matched, but not which keyword text — for that, the per-keyword breakdown is a follow-up.
 
@@ -103,7 +118,7 @@ The template footer already surfaces methodology, exclusions, and data source. M
 
 ## Common pitfalls
 
-**Skipping the total-spend pull.** Without `TOTAL_SPEND`, the "% of total" stat in the masthead is meaningless or wrong. Don't fake it from your own arithmetic — pull it from the analyst, since the report's spend number is the source of truth and accounts for cross-currency, refunds, etc.
+**Skipping the total-spend pull (connected mode).** Without `TOTAL_SPEND`, the "% of total" stat in the masthead is meaningless or wrong. Don't fake it from your own arithmetic — pull it from the analyst, since the report's spend number is the source of truth and accounts for cross-currency, refunds, etc.
 
 **Hardcoding `WORST_TERM` from prose.** The analyst's answer text often summarizes a top-3 list. Pull the worst term from RAW row 1 after you populate, not from the prose.
 

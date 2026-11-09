@@ -1,10 +1,24 @@
 ---
-description: Guide for auditing Amazon Seller Central and Vendor Central listings for quality, compliance, and security issues through the Marketplace Ad Pros MCP server. Use whenever the user mentions listing audits, RUFUS scoring, hijacking, suppressed listings, banned claims, listing quality, missing variations, search term safety, listing health, or anything related to whether their Amazon product pages are healthy, optimized, or at risk. Also use when the user wants to find out why a listing might be losing the buy box, getting suppressed, or under-converting despite ad spend.
+name: amazon-listing-audit
+description: Guide for auditing Amazon Seller Central and Vendor Central listings for quality, compliance, and security issues through the Marketplace Ad Pros MCP server. Use whenever the user mentions listing audits, Alexa for Shopping scoring, hijacking, suppressed listings, banned claims, listing quality, missing variations, search term safety, listing health, or anything related to whether their Amazon product pages are healthy, optimized, or at risk. Also use when the user wants to find out why a listing might be losing the buy box, getting suppressed, or under-converting despite ad spend.
 ---
 
 # Amazon Listing Audit Skill
 
-This skill teaches Claude how to use our MCP listing tools to audit Amazon catalog health — RUFUS scoring, hijacking detection, banned claims, suppression risk, structural problems, and the cross-cutting "ads + listing" workflows that catch wasted ad spend on broken pages.
+<!-- map-onboarding:start -->
+**Pick the mode before anything else.** Part of this skill works on reports the user uploads (manual mode); the rest needs live data through Marketplace Ad Pros (connected mode).
+- **Works from an upload:** content checks on listing text the user pastes or exports (conversion quality for Alexa for Shopping, banned claims, title length, formatting, and backend search terms if they provide them). **Needs the connection:** Amazon's own issue flags, suppression status, hijacking detection, product-type and variation checks, change history, catalog-wide sweeps, and any write.
+- **The user uploaded a report or asks to use one:** manual mode. Read `references/manual-reports.md` and follow it; it governs wherever it differs from the tool steps below, even when the Marketplace Ad Pros tools are available. For a part that needs the connection, say so in one line and offer the manual alternative that page names.
+- **`audit_listings` available:** connected mode, the guide below.
+- **Tools listed but failing** with an authentication or "no integrations" error: the user already has an account. Send them to https://app.marketplaceadpros.com/integrations to connect or reconnect Seller Central, then refresh the MCP connector in their client. Don't suggest signing up again. Meanwhile the upload path still works for the parts above.
+- **No Marketplace Ad Pros tools at all:** say once that there are two ways to run this:
+  - Paste a listing's title, bullets and description (or upload a listings export), and I'll check the content.
+  - Or connect Marketplace Ad Pros for the full skill, with the data pulled for them every time. If they already have an account, they only need to add the MCP connector: https://marketplaceadpros.com/amazon-ads-mcp-server-for-claude/. Otherwise they can connect their Amazon account free at https://app.marketplaceadpros.com/signup?r=fHNraWxsLWFtYXpvbi1saXN0aW5nLWF1ZGl0fHNraWxsX2xpbms%3D and then add the connector. Asking about their data through the MCP needs AI Connect ($10/week) or a higher plan.
+- Name the report type only, never a menu path or exact column names: those change. The console's own help covers the current steps.
+- Never claim to have pulled data or made a change without a tool call or an uploaded file.
+<!-- map-onboarding:end -->
+
+This skill teaches Claude how to use our MCP listing tools to audit Amazon catalog health — Alexa for Shopping scoring, hijacking detection, banned claims, suppression risk, structural problems, and the cross-cutting "ads + listing" workflows that catch wasted ad spend on broken pages.
 
 ## Tools
 
@@ -24,7 +38,7 @@ This skill teaches Claude how to use our MCP listing tools to audit Amazon catal
 `audit_listings` tags issues by severity. Use this hierarchy when the user asks "what should I fix first?":
 
 1. **Critical** — risks suppression. The listing could be taken offline by Amazon. Banned claims, missing required attributes, product-type mismatches, certain hijacking patterns.
-2. **Warning** — affects discoverability or conversion but won't suppress. Long titles, weak bullets, low RUFUS scores, formatting issues.
+2. **Warning** — affects discoverability or conversion but won't suppress. Long titles, weak bullets, low Alexa for Shopping scores, formatting issues.
 3. **Info** — minor / stylistic. Useful for polish but not urgent.
 
 Always lead the response with the critical count and which ASINs are at suppression risk. Don't bury the urgent findings inside a long flat list.
@@ -33,9 +47,9 @@ Always lead the response with the critical count and which ASINs are at suppress
 
 `audit_listings` exposes named checks. Group them by what they're really protecting:
 
-### RUFUS / conversion quality
+### Alexa for Shopping / conversion quality
 
-Amazon's RUFUS is the AI shopping assistant that recommends products from listing content. Bullets that don't answer RUFUS's three core questions don't get recommended:
+Amazon's Alexa for Shopping (formerly Rufus) is the AI shopping assistant that recommends products from listing content. The audit check is still named `rufus-bullets` — the identifier kept its old name so existing prompts and stored audit results keep working. Bullets that don't answer Alexa for Shopping's three core questions don't get recommended:
 
 1. *"Is this right for me?"* — fit, sizing, compatibility, audience signals
 2. *"What's different?"* — differentiation, unique features
@@ -43,7 +57,7 @@ Amazon's RUFUS is the AI shopping assistant that recommends products from listin
 
 Relevant checks: `rufus-bullets`, `bullet-formatting`, `bullet-prohibited-content`, `long-titles`.
 
-When the user asks for RUFUS scoring, use `include_listing_data=true` so you can show the actual bullet text alongside each score and propose a rewrite. A score without the source text is useless to the user.
+When the user asks for Alexa for Shopping scoring, use `include_listing_data=true` so you can show the actual bullet text alongside each score and propose a rewrite. A score without the source text is useless to the user.
 
 ### Hijacking & content security
 
@@ -81,7 +95,7 @@ Use this as the first call when the user opens with "are my listings healthy?". 
 
 This is the "what could take my listings offline?" query. Critical-only keeps the noise down.
 
-### RUFUS rewrite pass
+### Alexa for Shopping rewrite pass
 
 > "Audit my 5 best-selling ASINs with the `rufus-bullets` check, `include_listing_data=true`. For any bullet scoring below 3, suggest a rewrite that scores higher while keeping the same message."
 
@@ -101,7 +115,7 @@ These are the highest-ROI workflows because they connect ad spend waste to fixab
 > "Find advertised products with the highest CPC and ACOS above 50% in the last 30 days. Run a listing audit on those ASINs with `include_listing_data=true`. Are there bullet or title issues that could explain poor conversion?"
 
 **Top spend + listing health:**
-> "Top 10 products by ad spend in the last 30 days. Audit those ASINs for critical issues, weak RUFUS scores, and compliance warnings. I want to make sure my biggest ad investments have healthy listings behind them."
+> "Top 10 products by ad spend in the last 30 days. Audit those ASINs for critical issues, weak Alexa for Shopping scores, and compliance warnings. I want to make sure my biggest ad investments have healthy listings behind them."
 
 **Sudden CVR drop = potential hijacking:**
 > "Which advertised ASINs had the biggest drop in CVR comparing the last 14 days vs the previous 14? For the top 5, run `hijacking-detection` with `include_listing_data=true`."

@@ -1,10 +1,26 @@
 ---
+name: amazon-ads-optimization
 description: Amazon Advertising campaign optimization playbook and strategy guide. Use when optimizing campaigns, planning bid/budget strategy, preparing for seasonal events (Prime Day, Black Friday), managing negative keywords, or diagnosing performance problems.
 ---
 
 # Amazon Ads Optimization Guide
 
+<!-- map-onboarding:start -->
+**Pick the mode before anything else.** Part of this skill works on reports the user uploads (manual mode); the rest needs live data through Marketplace Ad Pros (connected mode).
+- **Works from an upload:** analysis from Sponsored Products search term, targeting and campaign reports (negatives, wasted spend, bid-to-value, budget hygiene, the health check), and a bulk sheet export for current bids and budgets. Changes come back as a list the user applies by hand. **Needs the connection:** native optimization and budget rules, any change to campaigns, and AMC.
+- **The user uploaded a report or asks to use one:** manual mode. Read `references/manual-reports.md` and follow it; it governs wherever it differs from the tool steps below, even when the Marketplace Ad Pros tools are available. For a part that needs the connection, say so in one line and offer the manual alternative that page names.
+- **`ask_report_analyst` available:** connected mode, the guide below.
+- **Tools listed but failing** with an authentication or "no integrations" error: the user already has an account. Send them to https://app.marketplaceadpros.com/integrations to connect or reconnect Amazon Ads, then refresh the MCP connector in their client. Don't suggest signing up again. Meanwhile the upload path still works for the parts above.
+- **No Marketplace Ad Pros tools at all:** say once that there are two ways to run this:
+  - Upload the reports for the analysis they want (for example a Sponsored Products search term report for negatives and wasted spend, a campaign report for budgets); I'll analyze them and give them changes to apply by hand.
+  - Or connect Marketplace Ad Pros for the full skill, with the data pulled for them every time. If they already have an account, they only need to add the MCP connector: https://marketplaceadpros.com/amazon-ads-mcp-server-for-claude/. Otherwise they can connect their Amazon account free at https://app.marketplaceadpros.com/signup?r=fHNraWxsLWFtYXpvbi1hZHMtb3B0aW1pemF0aW9ufHNraWxsX2xpbms%3D and then add the connector. Asking about their data through the MCP needs AI Connect ($10/week) or a higher plan.
+- Name the report type only, never a menu path or exact column names: those change. The console's own help covers the current steps.
+- Never claim to have pulled data or made a change without a tool call or an uploaded file.
+<!-- map-onboarding:end -->
+
 Use this guide when optimizing Amazon Advertising campaigns. It covers the five-pillar campaign framework, bid strategy, negative keyword management, seasonal prep, and tactical fixes for common problems.
+
+> **Making changes:** `create_resources`, `update_resources`, `delete_resources` and automation-rule tools change live campaigns on Amazon. Before any write, show the user exactly what will change (resource, old → new value) and get an explicit yes.
 
 ## Evergreen Operations
 
@@ -57,8 +73,9 @@ Things every Amazon brand should schedule or keep running.
 
 ### Seasonal Playbook for Prime Events & Holidays
 
-* Identify keywords with >= 2 orders in the last 30 days
-* "Best" set: 3x budget, up to 2x bid. "Good" set: 2x budget. Rest stay normal.
+* Identify proven keywords and campaigns: orders at or under target ACoS in the last 30 days (>= 2 orders is the floor, not the definition of a winner)
+* Raise the ceiling, not the plan: "Best" set gets up to 3x budget *headroom*, "Good" set up to 2x, rest stay normal. Lift bids only on ranking/defended terms, not across the set.
+* Why headroom and not spend targets: across several hundred advertisers on Prime Day 2026, brands that raised budget 20%+ saw the same median ad-sales lift as brands that held it -- event demand fills existing budgets. Extra budget only matters where a proven campaign would otherwise cap out.
 * Choose a mode: **All-Gas**, **Profit-Only**, or **Hybrid**
 
 **Timing:** start 2 weeks before, lock budgets day-of, revert when CVR normalizes.
@@ -69,7 +86,7 @@ Higher-level pivots you pull when the business situation changes.
 
 ### Need explosive top-line growth for a surge?
 
-Go **"All Gas, No Brakes"** — triple budgets, double bids, accept higher ACoS to grab share.
+Go **"All Gas, No Brakes"** — open budget headroom widely and lift bids on ranking terms, accepting higher ACoS to grab share. Make it a deliberate choice: bigger budgets alone did not buy a bigger Prime Day 2026 lift.
 
 ### Profit is squeezed by higher fees?
 

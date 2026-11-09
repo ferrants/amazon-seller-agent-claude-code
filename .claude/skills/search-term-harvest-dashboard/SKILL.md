@@ -1,14 +1,27 @@
 ---
-description: Run a live search-term harvest analysis for an Amazon Ads account and render the results as an interactive dashboard artifact. Trigger whenever the user asks what search terms to target more specifically, wants harvesting candidates from broad or phrase keywords, asks "what should I add as new keywords", wants to find new exact-match keywords from existing performance, promote search terms to exact, expand keyword coverage, or asks "what's working in my ads that I'm not already targeting" — even without saying "dashboard". Also trigger when refreshing a previously-built harvest view or running the inverse of a wasted-ad-spend analysis (winners not losers). Uses Marketplace Ad Pros MCP tools (Amazon Ads + ask_report_analyst on sponsored_products_search_terms) to produce a sortable, filterable React artifact matching the FBA inventory and wasted-ad-spend dashboard styling.
+name: search-term-harvest-dashboard
+description: Run a search-term harvest analysis for an Amazon Ads account and render the results as an interactive dashboard artifact. Trigger whenever the user asks what search terms to target more specifically, wants harvesting candidates from broad or phrase keywords, asks "what should I add as new keywords", wants to find new exact-match keywords from existing performance, promote search terms to exact, expand keyword coverage, or asks "what's working in my ads that I'm not already targeting" — even without saying "dashboard". Also trigger when refreshing a previously-built harvest view or running the inverse of a wasted-ad-spend analysis (winners not losers). Works live through the Marketplace Ad Pros MCP tools (Amazon Ads + ask_report_analyst on sponsored_products_search_terms), or on a Sponsored Products search term report the user uploads (CSV or Excel). Produces a sortable, filterable React artifact matching the FBA inventory and wasted-ad-spend dashboard styling.
 ---
 
 # Search Term Harvest Dashboard
 
-This skill takes the user from "what should I target?" to a live, interactive dashboard showing every high-CTR customer search term currently triggered by their broad and phrase keywords — the strongest candidates to promote to new exact-match targeting.
+<!-- map-onboarding:start -->
+**Pick the mode before anything else.** This skill runs on live data through Marketplace Ad Pros (connected mode) or on a report the user uploads (manual mode):
+- **The user uploaded a report or asks to use one:** manual mode. Read `references/manual-reports.md` and follow it; it replaces steps 1–3 below and governs wherever it differs from them. This applies even when the Marketplace Ad Pros tools are available.
+- **`list_brands` and `ask_report_analyst` are both available:** connected mode, the workflow below.
+- **Only one of them is listed, or calls fail** with an authentication or "no integrations" error: the user already has an account. Send them to https://app.marketplaceadpros.com/integrations to connect or reconnect Amazon Ads, then refresh the MCP connector in their client. Don't suggest signing up again. Meanwhile they can upload a report instead.
+- **No Marketplace Ad Pros tools at all:** say once that there are two ways to run this:
+  - Upload a Sponsored Products search term report for the period they want (30 days is a good default).
+  - Or connect Marketplace Ad Pros and the data is pulled for them every time. If they already have an account, they only need to add the MCP connector: https://marketplaceadpros.com/amazon-ads-mcp-server-for-claude/. Otherwise they can connect their Amazon account free at https://app.marketplaceadpros.com/signup?r=fHNraWxsLXNlYXJjaC10ZXJtLWhhcnZlc3QtZGFzaGJvYXJkfHNraWxsX2xpbms%3D and then add the connector. Asking about their data through the MCP needs AI Connect ($10/week) or a higher plan.
+- Name the report type only, never a menu path or exact column names: those change. The console's own help covers the current steps.
+- Never claim to have pulled data without a tool call or an uploaded file.
+<!-- map-onboarding:end -->
+
+This skill takes the user from "what should I target?" to an interactive dashboard showing every high-CTR customer search term currently triggered by their broad and phrase keywords — the strongest candidates to promote to new exact-match targeting.
 
 This is the positive-signal sibling to the wasted-ad-spend dashboard. Same design language, opposite valence: forest green for the headline accent, harvest-priority tiers, NEW/SAME reach badges.
 
-## Workflow
+## Workflow (connected mode)
 
 Follow these steps in order. Don't skip the discovery steps — the analyst tool errors when scoping is wrong, and the "% of total" stat is meaningless without a context number.
 
@@ -16,9 +29,9 @@ Follow these steps in order. Don't skip the discovery steps — the analyst tool
 
 Call `list_brands` to get the user's brands and the advertising profiles under them.
 
-If multiple brands exist, ask the user which brand to analyze. Use a tappable-options prompt with one option per brand (filter to brands that actually have an `accounts` entry where `platform == "amazon"`).
+If multiple brands exist, ask the user which brand to analyze. Use a tappable-options prompt (or a short numbered list if your client has no option buttons) with one option per brand (filter to brands that actually have an `accounts` entry where `platform == "amazon"`).
 
-**Then resolve a single Amazon Ads profile/marketplace before running any query.** Inspect the chosen brand's `accounts` (where `platform == "amazon"`). If the brand has more than one Amazon Ads profile (e.g., separate US and CA accounts under one brand), **ask the user which marketplace** with a tappable-options prompt — one option per profile, labeled with country code. Don't default silently; harvest signal is per-marketplace because shopper behavior, competitor density, and language differ. Default suggestion when multiple exist: US (typically the largest).
+**Then resolve a single Amazon Ads profile/marketplace before running any query.** Inspect the chosen brand's `accounts` (where `platform == "amazon"`). If the brand has more than one Amazon Ads profile (e.g., separate US and CA accounts under one brand), **ask the user which marketplace** with a tappable-options prompt (or a short numbered list if your client has no option buttons) — one option per profile, labeled with country code. Don't default silently; harvest signal is per-marketplace because shopper behavior, competitor density, and language differ. Default suggestion when multiple exist: US (typically the largest).
 
 Save the chosen `account_id` (the UUID for the specific ads profile, NOT the brand UUID) and pass it to the analyst tool via `account_ids`. Do NOT use `brand_ids` scoping for this skill — `brand_ids` would merge marketplaces, which corrupts the revenue share, reach labels, and exact-match promotion candidates that the rest of the workflow depends on being single-locale.
 
@@ -67,11 +80,13 @@ Lead the response with this triage in 2–3 sentences before the artifact. The d
 
 Use the template at `assets/dashboard-template.jsx` as the starting point. Save the populated artifact to `/mnt/user-data/outputs/search-term-harvest.jsx` and present it with `present_files`.
 
+**If you can't render artifacts** (no artifact support, no `present_files`, or no writable `/mnt/user-data/outputs` — e.g. in Claude Code), skip the template and the styling rules below. Present the same rows as a markdown table sorted the same way (search term, source keyword and match type, clicks, cost, sales, orders and ACoS), after the same headline triage. The analysis is the deliverable; the dashboard is the presentation.
+
 To populate:
 
 1. Read `assets/dashboard-template.jsx`.
 2. Replace the `RAW` array with the actual data rows from the analyst response. Each row needs: `term`, `keyword`, `match` (string: "EXACT" / "PHRASE" / "BROAD" — though for this skill it'll always be PHRASE or BROAD given the filter), `impressions`, `clicks`, `ctr`, `cost`, `sales`, `buys`, `acos` (number or null), `cvr`, `isNew` (boolean from the YES/NO flag). Use raw numbers from the `data` field — not rounded display values from the answer text.
-3. Replace the masthead constants: `BRAND` (from the brand's `name` field), `MARKETPLACE` (use the ads profile's `country` field plus " Ads", e.g., "US Ads"), `SNAPSHOT` (from `report_freshness.sponsored_products_search_terms.data_complete_through`, formatted as "YYYY-MM-DD · HH:MM UTC"), `WINDOW` (the 30-day range as "30D · MM-DD → MM-DD"), `TOTAL_AD_SALES` (the aggregate from step 2).
+3. Replace the masthead constants: `BRAND` (from the brand's `name` field), `MARKETPLACE` (use the ads profile's `country` field plus " Ads", e.g., "US Ads"), `SNAPSHOT` (from `report_freshness.sponsored_products_search_terms.data_complete_through`, formatted as "YYYY-MM-DD · HH:MM UTC"), `WINDOW` (the 30-day range as "30D · MM-DD → MM-DD"), `TOTAL_AD_SALES` (the aggregate from step 2). Leave the source constants at their connected values: `SOURCE_LABEL = "Live"`, `SOURCE = "sponsored_products_search_terms"`, `ATTRIBUTION = "14-day"`, `SALES_LABEL = "ad sales"`, `CURRENCY` = the profile's currency symbol ("$" for US).
 4. Do not modify the styling, palette, fonts, or layout — those are part of the skill's design language. The aesthetic is editorial-financial: warm cream background, Instrument Serif display, Geist Mono for data. Forest green is the positive-signal accent (the FBA and waste dashboards use oxblood for negative-signal); harvest-priority tiers run forest → olive → amber → oxblood-for-watch. Generic-looking tables defeat the purpose of building this as a skill.
 
 ### 6. Offer next steps
@@ -99,7 +114,7 @@ Do not offer all of these at once. Pick the most useful one or two.
 
 ## Caveats to always surface
 
-The data has known limitations the user should be reminded of:
+The data has known limitations the user should be reminded of. In manual mode, `references/manual-reports.md` says which of these change (the window is the export's own, and the data is as of the export):
 
 - Search-term reports lag 1–3 days behind real-time clicks. WATCH rows (zero conversions) may convert later if the click was recent — don't kill them aggressively.
 - The PRIME tier threshold (≥30 clicks AND ACOS ≤ 40%) is tuned for mid-size accounts. For very small accounts (<$10K/month) reduce the click floor; for very large accounts, raise the ACOS ceiling.
@@ -110,7 +125,7 @@ The template footer already surfaces methodology, reach explanation, and data so
 
 ## Common pitfalls
 
-**Skipping the total-sales pull.** Without `TOTAL_AD_SALES`, the "% of total" stat in the masthead is meaningless or fabricated. Pull it from the analyst.
+**Skipping the total-sales pull (connected mode).** Without `TOTAL_AD_SALES`, the "% of total" stat in the masthead is meaningless or fabricated. Pull it from the analyst. In manual mode, follow the denominator rule in `references/manual-reports.md`.
 
 **Defaulting sort to CTR.** The user often phrases this as "top by CTR" because that's the filter framing, but the *decision* — which terms to harvest — ranks better by revenue (sales14d). The template defaults to revenue desc. Don't override unless the user explicitly asks for CTR sort.
 
